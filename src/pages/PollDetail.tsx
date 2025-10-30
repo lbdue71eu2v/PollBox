@@ -15,12 +15,20 @@ import {
 } from "wagmi";
 import { POLLBOX_ADDRESS, POLLBOX_ABI } from "@/config/contracts";
 import { encryptVote } from "@/lib/fhe";
+import { initializePollMetadata } from "@/lib/initPollMetadata";
 
 const PollDetail = () => {
   const { id } = useParams();
   const { toast } = useToast();
   const { address } = useAccount();
   const pollId = id ? BigInt(id) : BigInt(0);
+
+  // Initialize metadata on first load
+  useEffect(() => {
+    if (!localStorage.getItem("pollMetadata")) {
+      initializePollMetadata();
+    }
+  }, []);
 
   // Read poll details from contract
   const { data: pollData, refetch: refetchPoll } = useReadContract({
@@ -44,6 +52,7 @@ const PollDetail = () => {
   });
 
   const [metadata, setMetadata] = useState<any>(null);
+  const [isEncrypting, setIsEncrypting] = useState(false);
 
   // Load metadata from localStorage
   useEffect(() => {
@@ -86,7 +95,16 @@ const PollDetail = () => {
       return;
     }
 
+    // Set encrypting state immediately
+    setIsEncrypting(true);
+
     try {
+      // Show encryption toast
+      toast({
+        title: "🔐 Encrypting Vote",
+        description: `Encrypting your ${vote.toUpperCase()} vote using FHE...`,
+      });
+
       console.log(`[Vote] Encrypting ${vote} vote...`);
 
       const { encryptedVote, proof } = await encryptVote(
@@ -94,6 +112,12 @@ const PollDetail = () => {
         POLLBOX_ADDRESS,
         address
       );
+
+      // Show submission toast
+      toast({
+        title: "📝 Submitting Vote",
+        description: "Sending encrypted vote to blockchain...",
+      });
 
       console.log("[Vote] Submitting encrypted vote to contract...");
 
@@ -103,7 +127,10 @@ const PollDetail = () => {
         functionName: "vote",
         args: [pollId, encryptedVote, proof],
       });
+
+      setIsEncrypting(false);
     } catch (error: any) {
+      setIsEncrypting(false);
       console.error("Failed to vote:", error);
       toast({
         title: "Failed to Vote",
@@ -169,19 +196,19 @@ const PollDetail = () => {
                     variant="vote-yes"
                     onClick={() => handleVote("yes")}
                     className="h-auto py-8 flex flex-col gap-3"
-                    disabled={isPending || isConfirming}
+                    disabled={isEncrypting || isPending || isConfirming}
                   >
                     <CheckCircle className="h-8 w-8" />
-                    <span className="text-xl">{isPending || isConfirming ? "Voting..." : "YES"}</span>
+                    <span className="text-xl">{isEncrypting || isPending || isConfirming ? "Voting..." : "YES"}</span>
                   </Button>
                   <Button
                     variant="vote-no"
                     onClick={() => handleVote("no")}
                     className="h-auto py-8 flex flex-col gap-3"
-                    disabled={isPending || isConfirming}
+                    disabled={isEncrypting || isPending || isConfirming}
                   >
                     <XCircle className="h-8 w-8" />
-                    <span className="text-xl">{isPending || isConfirming ? "Voting..." : "NO"}</span>
+                    <span className="text-xl">{isEncrypting || isPending || isConfirming ? "Voting..." : "NO"}</span>
                   </Button>
                 </div>
                 <p className="text-center text-sm text-muted-foreground mt-6">

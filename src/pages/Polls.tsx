@@ -2,13 +2,21 @@ import { Navbar } from "@/components/Navbar";
 import { PollCard } from "@/components/PollCard";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useReadContract } from "wagmi";
+import { useReadContract, useReadContracts } from "wagmi";
 import { POLLBOX_ADDRESS, POLLBOX_ABI } from "@/config/contracts";
 import { useState, useEffect } from "react";
+import { initializePollMetadata } from "@/lib/initPollMetadata";
 
 const Polls = () => {
   const [polls, setPolls] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Initialize metadata on first load
+  useEffect(() => {
+    if (!localStorage.getItem("pollMetadata")) {
+      initializePollMetadata();
+    }
+  }, []);
 
   // Get total poll count
   const { data: nextPollId } = useReadContract({
@@ -17,33 +25,72 @@ const Polls = () => {
     functionName: "nextPollId",
   });
 
-  // Load all polls
+  // Load all polls from contract
   useEffect(() => {
     const loadPolls = async () => {
       if (!nextPollId) return;
 
       const pollCount = Number(nextPollId);
-      const pollPromises = [];
-
-      for (let i = 0; i < pollCount; i++) {
-        pollPromises.push(
-          fetch(`/api/poll/${i}`).catch(() => null) // Dummy fetch, will use useReadContract in real implementation
-        );
+      if (pollCount === 0) {
+        setLoading(false);
+        return;
       }
 
-      // For now, load from localStorage
+      // Load metadata from localStorage
       const storedMetadata = JSON.parse(
         localStorage.getItem("pollMetadata") || "{}"
       );
 
       const loadedPolls = [];
+
+      // Fetch each poll's details from contract
       for (let i = 0; i < pollCount; i++) {
-        // In real implementation, fetch each poll details here
-        // For now, just structure the data
-        loadedPolls.push({
-          id: i.toString(),
-          // Metadata would be loaded from chain/localStorage
-        });
+        try {
+          const response = await fetch(
+            `https://ethereum-sepolia-rpc.publicnode.com`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                jsonrpc: "2.0",
+                id: i,
+                method: "eth_call",
+                params: [
+                  {
+                    to: POLLBOX_ADDRESS,
+                    data: `0xf2d4cf52${i.toString(16).padStart(64, "0")}`, // getPollDetails(uint256)
+                  },
+                  "latest",
+                ],
+              }),
+            }
+          );
+
+          const data = await response.json();
+          if (data.result) {
+            // Parse the result (simplified)
+            const metadataHash = `0x${data.result.slice(2, 66)}`;
+            const deadline = parseInt(data.result.slice(130, 146), 16);
+            const revealed = parseInt(data.result.slice(146, 148), 16) === 1;
+            const yesResult = parseInt(data.result.slice(148, 180), 16);
+            const noResult = parseInt(data.result.slice(180, 212), 16);
+
+            const metadata = storedMetadata[metadataHash];
+            if (metadata) {
+              const totalVotes = yesResult + noResult;
+              loadedPolls.push({
+                id: i.toString(),
+                title: metadata.title,
+                description: metadata.description,
+                endDate: new Date(deadline * 1000).toLocaleDateString(),
+                totalVotes,
+                status: Date.now() / 1000 < deadline && !revealed ? "active" : "ended",
+              });
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to load poll ${i}:`, error);
+        }
       }
 
       setPolls(loadedPolls);
@@ -54,16 +101,8 @@ const Polls = () => {
   }, [nextPollId]);
 
   // Filter polls by status
-  const now = Math.floor(Date.now() / 1000);
-  const activePolls = polls.filter((p: any) => {
-    // Would check deadline from contract
-    return true; // Placeholder
-  });
-
-  const endedPolls = polls.filter((p: any) => {
-    // Would check deadline from contract
-    return false; // Placeholder
-  });
+  const activePolls = polls.filter((p: any) => p.status === "active");
+  const endedPolls = polls.filter((p: any) => p.status === "ended");
 
   return (
     <div className="min-h-screen bg-background">
