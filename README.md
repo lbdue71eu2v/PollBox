@@ -2,6 +2,12 @@
 
 A privacy-preserving voting platform built with Fully Homomorphic Encryption (FHE) using Zama's fhEVM technology.
 
+## Demo Video
+
+![Demo Video](demo.mp4)
+
+Watch the demo to see PollBox in action: encrypted voting, wallet integration, and real-time poll results.
+
 ## Features
 
 - **Encrypted Voting**: All votes are encrypted using FHE, ensuring complete privacy
