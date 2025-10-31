@@ -15,20 +15,12 @@ import {
 } from "wagmi";
 import { POLLBOX_ADDRESS, POLLBOX_ABI } from "@/config/contracts";
 import { encryptVote } from "@/lib/fhe";
-import { initializePollMetadata } from "@/lib/initPollMetadata";
 
 const PollDetail = () => {
   const { id } = useParams();
   const { toast } = useToast();
   const { address } = useAccount();
   const pollId = id ? BigInt(id) : BigInt(0);
-
-  // Initialize metadata on first load
-  useEffect(() => {
-    if (!localStorage.getItem("pollMetadata")) {
-      initializePollMetadata();
-    }
-  }, []);
 
   // Read poll details from contract
   const { data: pollData, refetch: refetchPoll } = useReadContract({
@@ -51,21 +43,20 @@ const PollDetail = () => {
     hash,
   });
 
-  const [metadata, setMetadata] = useState<any>(null);
   const [isEncrypting, setIsEncrypting] = useState(false);
 
-  // Load metadata from localStorage
+  // Handle successful vote submission
   useEffect(() => {
-    if (pollData && pollData[0]) {
-      const metadataHash = pollData[0];
-      const storedMetadata = JSON.parse(
-        localStorage.getItem("pollMetadata") || "{}"
-      );
-      setMetadata(storedMetadata[metadataHash]);
+    if (isSuccess) {
+      toast({
+        title: "Vote Submitted!",
+        description: "Your encrypted vote has been recorded",
+      });
+      refetchPoll();
     }
-  }, [pollData]);
+  }, [isSuccess, toast, refetchPoll]);
 
-  if (!pollData || !metadata) {
+  if (!pollData) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
@@ -76,7 +67,7 @@ const PollDetail = () => {
     );
   }
 
-  const [metadataHash, creator, deadline, revealed, yesResult, noResult] = pollData;
+  const [title, description, creator, deadline, revealed, yesResult, noResult, decryptionPending] = pollData;
   const now = Math.floor(Date.now() / 1000);
   const isActive = Number(deadline) > now && !revealed;
   const endDate = new Date(Number(deadline) * 1000).toLocaleDateString();
@@ -140,14 +131,6 @@ const PollDetail = () => {
     }
   };
 
-  if (isSuccess) {
-    toast({
-      title: "Vote Submitted!",
-      description: "Your encrypted vote has been recorded",
-    });
-    refetchPoll();
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -165,8 +148,8 @@ const PollDetail = () => {
 
           <div className="space-y-8">
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold mb-4">{metadata.title}</h1>
-              <p className="text-lg text-muted-foreground">{metadata.description}</p>
+              <h1 className="text-3xl md:text-4xl font-bold mb-4">{title}</h1>
+              <p className="text-lg text-muted-foreground">{description}</p>
             </div>
 
             <div className="flex flex-wrap gap-6 text-sm">

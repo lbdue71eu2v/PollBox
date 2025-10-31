@@ -43,3 +43,4 @@ typechain-types
 # Misc
 *.tsbuildinfo
 .turbo
+.vercel

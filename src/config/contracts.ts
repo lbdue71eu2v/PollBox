@@ -1,7 +1,7 @@
 import { getAddress } from "viem";
 
 // PollBox contract address (Sepolia)
-export const POLLBOX_ADDRESS = getAddress("0x8bF9425f3ef90519dd4B2E03bf74F1cc776A03F5");
+export const POLLBOX_ADDRESS = getAddress("0x0D965fF6fDE94999290CcC50D1f44452779c32C4");
 
 // PollBox ABI (extracted from contracts/PollBox.sol)
 export const POLLBOX_ABI = [
@@ -9,7 +9,8 @@ export const POLLBOX_ABI = [
     type: "function",
     name: "createPoll",
     inputs: [
-      { name: "metadataHash", type: "bytes32" },
+      { name: "title", type: "string" },
+      { name: "description", type: "string" },
       { name: "durationSeconds", type: "uint64" }
     ],
     outputs: [{ name: "id", type: "uint256" }],
@@ -20,7 +21,7 @@ export const POLLBOX_ABI = [
     name: "vote",
     inputs: [
       { name: "id", type: "uint256" },
-      { name: "encChoice", type: "bytes" },
+      { name: "encChoice", type: "bytes32" },
       { name: "inputProof", type: "bytes" }
     ],
     outputs: [],
@@ -45,12 +46,14 @@ export const POLLBOX_ABI = [
     name: "getPollDetails",
     inputs: [{ name: "id", type: "uint256" }],
     outputs: [
-      { name: "metadataHash", type: "bytes32" },
+      { name: "title", type: "string" },
+      { name: "description", type: "string" },
       { name: "creator", type: "address" },
       { name: "deadline", type: "uint64" },
       { name: "revealed", type: "bool" },
       { name: "yesResult", type: "uint128" },
-      { name: "noResult", type: "uint128" }
+      { name: "noResult", type: "uint128" },
+      { name: "decryptionPending", type: "bool" }
     ],
     stateMutability: "view"
   },
@@ -76,7 +79,8 @@ export const POLLBOX_ABI = [
     name: "polls",
     inputs: [{ name: "", type: "uint256" }],
     outputs: [
-      { name: "metadataHash", type: "bytes32" },
+      { name: "title", type: "string" },
+      { name: "description", type: "string" },
       { name: "creator", type: "address" },
       { name: "deadline", type: "uint64" },
       { name: "yesCount", type: "bytes32" },
@@ -95,7 +99,7 @@ export const POLLBOX_ABI = [
     inputs: [
       { name: "id", type: "uint256", indexed: true },
       { name: "creator", type: "address", indexed: true },
-      { name: "metadataHash", type: "bytes32", indexed: false },
+      { name: "title", type: "string", indexed: false },
       { name: "deadline", type: "uint64", indexed: false }
     ]
   },
@@ -146,7 +150,7 @@ export const POLLBOX_ABI = [
   },
   {
     type: "error",
-    name: "EmptyHash"
+    name: "EmptyTitle"
   },
   {
     type: "error",

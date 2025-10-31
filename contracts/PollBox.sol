@@ -11,7 +11,8 @@ import {SepoliaConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
  */
 contract PollBox is SepoliaConfig {
     struct Poll {
-        bytes32 metadataHash;
+        string title;
+        string description;
         address creator;
         uint64 deadline;
         euint128 yesCount;
@@ -31,7 +32,7 @@ contract PollBox is SepoliaConfig {
 
     uint256 public constant MAX_PENDING_DURATION = 10 minutes;
 
-    event PollCreated(uint256 indexed id, address indexed creator, bytes32 metadataHash, uint64 deadline);
+    event PollCreated(uint256 indexed id, address indexed creator, string title, uint64 deadline);
     event VoteCast(uint256 indexed id, address indexed voter);
     event RevealRequested(uint256 indexed id, uint256 requestId);
     event Revealed(uint256 indexed id, uint128 yes, uint128 no);
@@ -40,7 +41,7 @@ contract PollBox is SepoliaConfig {
     error VotingEnded();
     error TooEarly();
     error InvalidDuration();
-    error EmptyHash();
+    error EmptyTitle();
     error AlreadyRevealed();
     error AlreadyVoted();
     error DecryptionInProgress();
@@ -60,26 +61,28 @@ contract PollBox is SepoliaConfig {
 
     /**
      * @notice Create a new poll
-     * @param metadataHash IPFS hash pointing to poll metadata
+     * @param title Poll title/question
+     * @param description Poll description
      * @param durationSeconds Poll duration in seconds
      * @return id Poll ID
      */
-    function createPoll(bytes32 metadataHash, uint64 durationSeconds) external returns (uint256 id) {
+    function createPoll(string calldata title, string calldata description, uint64 durationSeconds) external returns (uint256 id) {
         if (durationSeconds == 0) revert InvalidDuration();
-        if (metadataHash == bytes32(0)) revert EmptyHash();
-        
+        if (bytes(title).length == 0) revert EmptyTitle();
+
         id = nextPollId++;
         Poll storage p = polls[id];
-        p.metadataHash = metadataHash;
+        p.title = title;
+        p.description = description;
         p.creator = msg.sender;
         p.deadline = uint64(block.timestamp) + durationSeconds;
         p.yesCount = FHE.asEuint128(0);
         p.noCount = FHE.asEuint128(0);
-        
+
         FHE.allowThis(p.yesCount);
         FHE.allowThis(p.noCount);
-        
-        emit PollCreated(id, msg.sender, metadataHash, p.deadline);
+
+        emit PollCreated(id, msg.sender, title, p.deadline);
     }
 
     /**
@@ -194,14 +197,16 @@ contract PollBox is SepoliaConfig {
      * @notice Get poll details
      */
     function getPollDetails(uint256 id) external view returns (
-        bytes32 metadataHash,
+        string memory title,
+        string memory description,
         address creator,
         uint64 deadline,
         bool revealed,
         uint128 yesResult,
-        uint128 noResult
+        uint128 noResult,
+        bool decryptionPending
     ) {
         Poll storage p = polls[id];
-        return (p.metadataHash, p.creator, p.deadline, p.revealed, p.yesResult, p.noResult);
+        return (p.title, p.description, p.creator, p.deadline, p.revealed, p.yesResult, p.noResult, p.decryptionPending);
     }
 }

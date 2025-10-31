@@ -1,73 +1,88 @@
-# Welcome to your Lovable project
+# PollBox
 
-## Project info
+A privacy-preserving voting platform built with Fully Homomorphic Encryption (FHE) using Zama's fhEVM technology.
 
-**URL**: https://lovable.dev/projects/a77faac6-e726-4709-b7b1-84e421153664
+## Features
 
-## How can I edit this code?
+- **Encrypted Voting**: All votes are encrypted using FHE, ensuring complete privacy
+- **On-Chain Storage**: Poll data and encrypted votes stored directly on Sepolia blockchain
+- **Binary Voting**: Simple YES/NO voting mechanism
+- **Delayed Results**: Results only revealed after poll deadline via decryption gateway
+- **Web3 Integration**: Connect with MetaMask, OKX Wallet, or other Web3 wallets
 
-There are several ways of editing your application.
+## Tech Stack
 
-**Use Lovable**
+- **Frontend**: React + TypeScript + Vite
+- **Styling**: Tailwind CSS + shadcn/ui
+- **Smart Contracts**: Solidity with Zama fhEVM
+- **Blockchain**: Ethereum Sepolia Testnet
+- **Web3**: Wagmi v2 + Viem
+- **FHE**: Zama Relayer SDK
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/a77faac6-e726-4709-b7b1-84e421153664) and start prompting.
+## Smart Contract
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Network**: Sepolia Testnet
+- **Contract Address**: `0x0D965fF6fDE94999290CcC50D1f44452779c32C4`
+- **Explorer**: [View on Sepolia Etherscan](https://sepolia.etherscan.io/address/0x0D965fF6fDE94999290CcC50D1f44452779c32C4)
 
-**Use your preferred IDE**
+## Local Development
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+```bash
+# Install dependencies
+npm install
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start development server
 npm run dev
+
+# Build for production
+npm run build
 ```
 
-**Edit a file directly in GitHub**
+## Contract Development
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+# Install Hardhat dependencies
+npm install
 
-**Use GitHub Codespaces**
+# Compile contracts
+npx hardhat compile
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+# Deploy to Sepolia
+SEPOLIA_RPC_URL="https://ethereum-sepolia-rpc.publicnode.com" npx hardhat run scripts/deploy.js --network sepolia
 
-## What technologies are used for this project?
+# Create test polls
+SEPOLIA_RPC_URL="https://ethereum-sepolia-rpc.publicnode.com" npx hardhat run scripts/create-polls.cjs --network sepolia
+```
 
-This project is built with:
+## Environment Variables
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Create a `.env` file in the root directory:
 
-## How can I deploy this project?
+```env
+SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
+PRIVATE_KEY=your_private_key_here
+```
 
-Simply open [Lovable](https://lovable.dev/projects/a77faac6-e726-4709-b7b1-84e421153664) and click on Share -> Publish.
+## How It Works
 
-## Can I connect a custom domain to my Lovable project?
+1. **Create Poll**: Users create a poll with title, description, and duration
+2. **Cast Vote**: Votes are encrypted client-side using FHE before submission
+3. **On-Chain Storage**: Encrypted votes accumulate in smart contract
+4. **Request Reveal**: After deadline, anyone can request decryption
+5. **Gateway Callback**: Zama gateway decrypts and returns results
+6. **Display Results**: Final tallies shown as percentages
 
-Yes, you can!
+## Live Demo
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Visit [https://pollbox.vercel.app](https://pollbox.vercel.app) to try the application.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Security Features
+
+- **Complete Privacy**: Individual votes remain encrypted and untraceable
+- **Verifiable Results**: Decryption process is cryptographically verifiable
+- **Censorship Resistant**: All data stored on-chain
+- **No Middleman**: Direct wallet-to-contract interaction
+
+## License
+
+MIT

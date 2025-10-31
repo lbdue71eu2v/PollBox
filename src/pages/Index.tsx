@@ -4,35 +4,49 @@ import { PollCard } from "@/components/PollCard";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
+import { useReadContract } from "wagmi";
+import { POLLBOX_ADDRESS, POLLBOX_ABI } from "@/config/contracts";
+import { useState, useEffect } from "react";
+import { fetchPollDetails } from "@/lib/pollUtils";
 
 const Index = () => {
-  // Mock data for featured polls
-  const featuredPolls = [
-    {
-      id: "1",
-      title: "Should we implement dark mode?",
-      description: "Vote on whether the platform should support dark mode theme for better user experience.",
-      endDate: "Dec 31, 2025",
-      totalVotes: 1234,
-      status: "active" as const,
-    },
-    {
-      id: "2",
-      title: "Approve new governance proposal",
-      description: "Community vote on the latest governance changes for the protocol.",
-      endDate: "Dec 25, 2025",
-      totalVotes: 856,
-      status: "active" as const,
-    },
-    {
-      id: "3",
-      title: "Launch new feature early?",
-      description: "Should we release the beta version of the new analytics dashboard ahead of schedule?",
-      endDate: "Dec 20, 2025",
-      totalVotes: 2143,
-      status: "ended" as const,
-    },
-  ];
+  const [featuredPolls, setFeaturedPolls] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Get total poll count
+  const { data: nextPollId } = useReadContract({
+    address: POLLBOX_ADDRESS,
+    abi: POLLBOX_ABI,
+    functionName: "nextPollId",
+  });
+
+  // Load featured polls (first 3 active polls)
+  useEffect(() => {
+    const loadFeaturedPolls = async () => {
+      if (!nextPollId) return;
+
+      const pollCount = Number(nextPollId);
+      if (pollCount === 0) {
+        setLoading(false);
+        return;
+      }
+
+      const loadedPolls = [];
+
+      // Fetch up to 3 polls
+      for (let i = 0; i < Math.min(pollCount, 3); i++) {
+        const poll = await fetchPollDetails(i);
+        if (poll) {
+          loadedPolls.push(poll);
+        }
+      }
+
+      setFeaturedPolls(loadedPolls);
+      setLoading(false);
+    };
+
+    loadFeaturedPolls();
+  }, [nextPollId]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -58,9 +72,19 @@ const Index = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredPolls.map((poll) => (
-              <PollCard key={poll.id} {...poll} />
-            ))}
+            {loading ? (
+              <p className="col-span-full text-center py-8 text-muted-foreground">
+                Loading featured polls...
+              </p>
+            ) : featuredPolls.length > 0 ? (
+              featuredPolls.map((poll) => (
+                <PollCard key={poll.id} {...poll} />
+              ))
+            ) : (
+              <p className="col-span-full text-center py-8 text-muted-foreground">
+                No polls available. Create one to get started!
+              </p>
+            )}
           </div>
 
           <div className="mt-8 flex justify-center sm:hidden">

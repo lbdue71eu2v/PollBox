@@ -8,6 +8,8 @@ declare global {
       SepoliaConfig: Record<string, unknown>;
     };
     ethereum?: any;
+    okxwallet?: any;
+    coinbaseWalletExtension?: any;
   }
 }
 
@@ -94,7 +96,12 @@ export async function initializeFHE(provider?: any): Promise<any> {
     throw new Error('FHE SDK requires browser environment');
   }
 
-  const ethereumProvider = provider || window.ethereum;
+  const ethereumProvider =
+    provider ||
+    window.ethereum ||
+    (window as any).okxwallet?.provider ||
+    (window as any).okxwallet ||
+    (window as any).coinbaseWalletExtension;
 
   if (!ethereumProvider) {
     throw new Error('Ethereum provider not found. Please connect your wallet first.');
@@ -123,6 +130,13 @@ export async function initializeFHE(provider?: any): Promise<any> {
 /**
  * Encrypt a boolean vote (true = yes, false = no)
  */
+export const toBytes32 = (bytes: Uint8Array): `0x${string}` => {
+  if (bytes.length !== 32) {
+    throw new Error(`FHE handle must be 32 bytes; received ${bytes.length}`);
+  }
+  return toHex(bytes) as `0x${string}`;
+};
+
 export const encryptVote = async (
   vote: boolean,
   contractAddress: string,
@@ -146,7 +160,7 @@ export const encryptVote = async (
   console.log('[FHE] ✅ Encryption complete');
 
   return {
-    encryptedVote: toHex(handles[0]) as `0x${string}`,
+    encryptedVote: toBytes32(handles[0]),
     proof: toHex(inputProof) as `0x${string}`,
   };
 };

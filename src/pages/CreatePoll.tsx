@@ -14,7 +14,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useWriteContract, useWaitForTransactionReceipt, useAccount } from "wagmi";
 import { POLLBOX_ADDRESS, POLLBOX_ABI } from "@/config/contracts";
-import { keccak256, toBytes } from "viem";
 
 const CreatePoll = () => {
   const [date, setDate] = useState<Date>();
@@ -51,17 +50,6 @@ const CreatePoll = () => {
     }
 
     try {
-      // Create metadata object
-      const metadata = {
-        title,
-        description,
-        createdAt: Date.now(),
-      };
-
-      // Hash metadata to bytes32
-      const metadataString = JSON.stringify(metadata);
-      const metadataHash = keccak256(toBytes(metadataString));
-
       // Calculate duration in seconds
       const now = new Date();
       const durationSeconds = Math.floor((date.getTime() - now.getTime()) / 1000);
@@ -75,19 +63,14 @@ const CreatePoll = () => {
         return;
       }
 
-      console.log("Creating poll:", { metadataHash, durationSeconds });
+      console.log("Creating poll:", { title, description, durationSeconds });
 
       writeContract({
         address: POLLBOX_ADDRESS,
         abi: POLLBOX_ABI,
         functionName: "createPoll",
-        args: [metadataHash, BigInt(durationSeconds)],
+        args: [title, description, BigInt(durationSeconds)],
       });
-
-      // Store metadata in localStorage for display (in production, use IPFS)
-      const existingMetadata = JSON.parse(localStorage.getItem("pollMetadata") || "{}");
-      existingMetadata[metadataHash] = metadata;
-      localStorage.setItem("pollMetadata", JSON.stringify(existingMetadata));
 
     } catch (error: any) {
       console.error("Failed to create poll:", error);
